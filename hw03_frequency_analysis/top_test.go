@@ -7,7 +7,7 @@ import (
 )
 
 // Change to true if needed.
-var taskWithAsteriskIsCompleted = false
+var taskWithAsteriskIsCompleted = true
 
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
@@ -78,5 +78,23 @@ func TestTop10(t *testing.T) {
 			}
 			require.Equal(t, expected, Top10(text))
 		}
+	})
+
+	t.Run("Should ignore punctuation", func(t *testing.T) {
+		text := `?!a.,b;c?d!e:g.`
+		expected := []string{"a", "b", "c", "d", "e", "g"}
+		require.Equal(t, expected, Top10(text))
+	})
+
+	t.Run("Should ignore brackets", func(t *testing.T) {
+		text := `[Word] (still) {count}`
+		expected := []string{"count", "still", "word"}
+		require.Equal(t, expected, Top10(text))
+	})
+
+	t.Run("Should handle punctuation in the beginning and in the end", func(t *testing.T) {
+		text := `!a?`
+		expected := []string{"a"}
+		require.Equal(t, expected, Top10(text))
 	})
 }
