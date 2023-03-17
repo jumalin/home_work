@@ -3,37 +3,33 @@ package hw05parallelexecution
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 )
 
-var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
+var (
+	ErrErrorsLimitExceeded  = errors.New("errors limit exceeded")
+	ErrInvalidWorkersNumber = errors.New("invalid workers number")
+)
 
 type Task func() error
 
-type ErrorCounter struct {
-	count int
-	m     sync.RWMutex
-}
-
-func (e *ErrorCounter) Increment() {
-	e.m.Lock()
-	defer e.m.Unlock()
-	e.count++
-}
-
-func (e *ErrorCounter) IsMax(max int) bool {
-	if max < 0 {
-		return false
-	}
-	e.m.RLock()
-	defer e.m.RUnlock()
-	return e.count >= max
-}
-
 // Run starts tasks in n goroutines and stops its work when receiving m errors from tasks.
 func Run(tasks []Task, n, m int) error {
+	if n <= 0 {
+		return ErrInvalidWorkersNumber
+	}
+
+	errMax := int32(m)
+	errCount := new(int32)
+	isExceededErrMax := func() bool {
+		if errMax <= 0 {
+			return false
+		}
+		return atomic.LoadInt32(errCount) >= errMax
+	}
+
 	wg := new(sync.WaitGroup)
-	tasksChannel := make(chan Task, n)
-	var errCounter ErrorCounter
+	tasksChannel := make(chan Task)
 
 	// Start n goroutines to execute Tasks
 	for i := 0; i < n; i++ {
@@ -41,12 +37,9 @@ func Run(tasks []Task, n, m int) error {
 		go func() {
 			defer wg.Done()
 			for task := range tasksChannel {
-				if errCounter.IsMax(m) {
-					continue
-				}
 				err := task()
 				if err != nil {
-					errCounter.Increment()
+					atomic.AddInt32(errCount, 1)
 				}
 			}
 		}()
@@ -58,13 +51,16 @@ func Run(tasks []Task, n, m int) error {
 		defer close(tasksChannel)
 		defer wg.Done()
 		for _, task := range tasks {
+			if isExceededErrMax() {
+				break
+			}
 			tasksChannel <- task
 		}
 	}()
 
 	wg.Wait()
 
-	if errCounter.IsMax(m) {
+	if isExceededErrMax() {
 		return ErrErrorsLimitExceeded
 	}
 

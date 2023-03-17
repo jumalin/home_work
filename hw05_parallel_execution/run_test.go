@@ -68,7 +68,7 @@ func TestRun(t *testing.T) {
 		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
 	})
 
-	t.Run("concurrency test withour sleep", func(t *testing.T) {
+	t.Run("concurrency test without sleep", func(t *testing.T) {
 		tasksCount := 50
 		tasks := make([]Task, 0, tasksCount)
 
@@ -147,5 +147,15 @@ func TestRun(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, runTasksCount, int32(tasksCount), "errors were not ignored")
+	})
+
+	t.Run("invalid workers number", func(t *testing.T) {
+		rand.Seed(time.Now().UnixNano())
+		rng := int(^uint(0) >> 1)
+		workersCount := -rand.Intn(rng)
+
+		err := Run(nil, workersCount, 0)
+
+		require.Truef(t, errors.Is(err, ErrInvalidWorkersNumber), "actual err - %v", err)
 	})
 }
