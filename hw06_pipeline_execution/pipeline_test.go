@@ -95,7 +95,7 @@ func TestPipeline(t *testing.T) {
 		in := make(Bi)
 		close(in)
 
-		result := make([]string, 0, 0)
+		result := make([]string, 0)
 		start := time.Now()
 		for s := range ExecutePipeline(in, nil, stages...) {
 			result = append(result, s.(string))
