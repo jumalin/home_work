@@ -8,15 +8,15 @@ type (
 
 type Stage func(in In) (out Out)
 
-func ConcurrentStage(done In, in In, stage Stage) Out {
+func TerminatableStage(done In, in In, stage Stage) Out {
 	addedStream := make(Bi)
 	go func() {
 		defer close(addedStream)
-		for i := range stage(in) {
+		for stageResult := range stage(in) {
 			select {
 			case <-done:
 				return
-			case addedStream <- i:
+			case addedStream <- stageResult:
 			}
 		}
 	}()
@@ -24,11 +24,9 @@ func ConcurrentStage(done In, in In, stage Stage) Out {
 }
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-
-	// Place your code here.
 	proxyChannel := in
-	for _, stage := range stages {
-		proxyChannel = ConcurrentStage(done, proxyChannel, stage)
+	for i := range stages {
+		proxyChannel = TerminatableStage(done, proxyChannel, stages[i])
 	}
 	return proxyChannel
 }
