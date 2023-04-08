@@ -31,8 +31,9 @@ func TerminableStage(done In, in In) Out {
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
 	proxyChannel := in
 	for i := range stages {
+		proxyChannel = TerminableStage(done, proxyChannel)
 		proxyChannel = stages[i](proxyChannel)
 	}
 
-	return TerminableStage(done, proxyChannel)
+	return proxyChannel
 }
