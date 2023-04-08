@@ -95,7 +95,7 @@ func TestPipeline(t *testing.T) {
 		in := make(Bi)
 		close(in)
 
-		result := make([]string, 0)
+		result := make([]string, 0, 10)
 		start := time.Now()
 		for s := range ExecutePipeline(in, nil, stages...) {
 			result = append(result, s.(string))
@@ -106,6 +106,6 @@ func TestPipeline(t *testing.T) {
 		require.Less(t,
 			int64(elapsed),
 			// less ~0.1s for processing 0 values in 4 stages (100ms every) concurrently
-			int64(0.1*elapsed.Seconds()))
+			sleepPerStage*4)
 	})
 }
